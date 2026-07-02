@@ -16,14 +16,15 @@ Built with an agentic AI system — LLM, TTS, and STT — that guides beginners 
 
 ## Tech Stack
 
-| Layer | Choice |
-|-------|--------|
-| Frontend | Next.js 14 + Tailwind + HTML5 Canvas |
-| LLM | Gemini 2.5 Flash (or local Ollama) |
-| TTS | edge-tts (pa-IN voice) |
-| STT | OpenAI Whisper |
+| Component | Choice |
+|-----------|--------|
+| Framework | Next.js 14 (App Router) + TypeScript |
+| LLM | Ollama (local) or Gemini 2.5 Flash (cloud) |
+| TTS | **ElevenLabs Eleven v3** — Voice: "Pind Punjabi - Energetic and Encouraging" |
+| STT | OpenAI Whisper API or whisper.cpp |
+| Styling | Tailwind CSS + shadcn/ui |
 | Drawing | HTML5 Canvas + Perfect Freehand |
-| State | React + LocalStorage |
+| State | React context + LocalStorage |
 
 ## Quick Start
 
