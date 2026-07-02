@@ -21,7 +21,7 @@ User <-> Next.js Frontend <-> Agent Orchestrator <-> LLM / TTS / STT
 | Framework | Next.js 14 (App Router) + TypeScript |
 | Styling | Tailwind CSS + shadcn/ui |
 | Drawing | HTML5 Canvas + Perfect Freehand |
-| LLM | Gemini 2.5 Flash (API) or Ollama (local) |
+| LLM | Ollama (local) or Gemini 2.5 Flash (cloud) |
 | TTS | edge-tts (pa-IN voice) |
 | STT | OpenAI Whisper API or whisper.cpp |
 | State | React context + LocalStorage |
@@ -118,7 +118,7 @@ User Action (voice/draw/click)
 ### LLM System Prompt
 
 ```
-You are a friendly, encouraging Punjabi writing tutor for absolute beginners. 
+You are a friendly, encouraging Punjabi writing tutor for absolute beginners.
 Your student is learning the Gurmukhi alphabet.
 
 Rules:

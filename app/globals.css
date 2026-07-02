@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at top, rgba(124, 58, 237, 0.28), transparent 30%),
+    radial-gradient(circle at right, rgba(255, 159, 28, 0.16), transparent 25%),
+    #08111f;
+  color: white;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+@layer components {
+  .glass {
+    @apply border border-white/10 bg-white/5 shadow-glow backdrop-blur-xl;
+  }
+}
