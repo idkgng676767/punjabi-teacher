@@ -244,9 +244,9 @@ punjabi-teacher/
 
 ## Open Questions
 
-1. Should we use Ollama locally or stick to Gemini API for MVP?
-2. Do we need user accounts or is local storage enough for v1?
-3. Should writing validation use simple heuristics or a vision LLM?
+1. Should we use Ollama locally or stick to Gemini API for MVP? **Already solved**, we use Qwen2.5-7B-Instruct-Q4_K_M.gguf for local generation using llama.cpp
+3. Do we need user accounts or is local storage enough for v1?
+4. Should writing validation use simple heuristics or a vision LLM?
 
 ---
 
