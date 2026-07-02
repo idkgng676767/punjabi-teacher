@@ -19,7 +19,7 @@ Built with an agentic AI system — LLM, TTS, and STT — that guides beginners 
 | Component | Choice |
 |-----------|--------|
 | Framework | Next.js 14 (App Router) + TypeScript |
-| LLM | Ollama (local) or Gemini 2.5 Flash (cloud) |
+| LLM | **Qwen2.5-7B-Instruct-Q4_K_M.gguf** ran by **llama.cpp** |
 | TTS | **ElevenLabs Eleven v3** — Voice: "Pind Punjabi - Energetic and Encouraging" |
 | STT | OpenAI Whisper API or whisper.cpp |
 | Styling | Tailwind CSS + shadcn/ui |
