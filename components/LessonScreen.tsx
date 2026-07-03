@@ -1,338 +1,329 @@
 "use client";
 
-import { CheckCircle2, Mic, PenTool, Play, Sparkles, Pause } from "lucide-react";
-import type { ReactNode } from "react";
-import { useCallback, useRef, useState } from "react";
-import { AgentAvatar } from "@/components/AgentAvatar";
-import { ProgressBar } from "@/components/ProgressBar";
-import { letters, stageLabels } from "@/lib/letters";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { Mic, Sparkles, PenTool, Volume2, Loader2, Star, ArrowRight, RotateCcw } from "lucide-react";
+import { letters } from "@/lib/letters";
 import type { LessonStage } from "@/types";
+import { AgentAvatar } from "@/components/AgentAvatar";
 
 const stages: LessonStage[] = ["learn", "recognize", "write", "quiz"];
+const stageLabels = ["Learn", "Recognize", "Write", "Quiz"];
 
 export function LessonScreen() {
   const [currentLetterIndex, setCurrentLetterIndex] = useState(0);
   const [stage, setStage] = useState<LessonStage>("learn");
   const [selected, setSelected] = useState<string | null>(null);
-  const [xp, setXp] = useState(120);
-  const [streak, setStreak] = useState(4);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [aiFeedback, setAiFeedback] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [xp, setXp] = useState(0);
+  const [streak, setStreak] = useState(0);
+  const [aiResponse, setAiResponse] = useState<string | null>(null);
+  const [isLoadingTts, setIsLoadingTts] = useState(false);
+  const [isLoadingChat, setIsLoadingChat] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   const currentLetter = letters[currentLetterIndex];
   const progress = Math.round(((currentLetterIndex + 1) / letters.length) * 100);
 
-  // Choices without random sort to avoid hydration mismatch
   const choices = [
     currentLetter,
-    ...letters
-      .filter((l) => l.character !== currentLetter.character)
-      .slice(0, 3),
+    letters[(currentLetterIndex + 1) % letters.length],
+    letters[(currentLetterIndex + 2) % letters.length],
+    letters[(currentLetterIndex + 3) % letters.length],
   ];
 
-  const submitChoice = (character: string) => {
-    setSelected(character);
-    if (character === currentLetter.character) {
-      setXp((v) => v + 10);
-      setStreak((v) => v + 1);
-    }
-  };
-
-  const nextLetter = () => {
+  const handleNextLetter = useCallback(() => {
     setSelected(null);
-    setCurrentLetterIndex((v) => (v + 1) % letters.length);
+    setAiResponse(null);
+    setError(null);
+    setIsPlaying(false);
+    setCurrentLetterIndex((prev) => (prev + 1) % letters.length);
     setStage("learn");
-    setAiFeedback(null);
-    setAudioUrl(null);
-  };
+  }, []);
 
   const handleListen = useCallback(async () => {
-    setIsLoading(true);
+    setError(null);
+    setIsLoadingTts(true);
     try {
-      const response = await fetch(`/api/tts`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+      const response = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: currentLetter.pronunciation }),
       });
 
       if (!response.ok) {
-        throw new Error(`TTS error: ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || `TTS failed with status ${response.status}`);
       }
 
       const data = await response.json();
-      if (data.audio) {
-        setAudioUrl(`data:${data.contentType};base64,${data.audio}`);
-        // Play audio
-        if (audioRef.current) {
-          audioRef.current.src = audioUrl ?? "";
-          audioRef.current.play();
-        }
-      } else {
-        throw new Error("No audio data returned");
+      const audioSrc = `data:${data.contentType};base64,${data.audio}`;
+      
+      if (audioRef.current) {
+        audioRef.current.src = audioSrc;
+        await audioRef.current.play();
+        setIsPlaying(true);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("TTS error:", err);
-      setAiFeedback("Sorry, I couldn't generate audio. Try again.");
+      setError(err.message || "Failed to generate audio.");
     } finally {
-      setIsLoading(false);
+      setIsLoadingTts(false);
     }
   }, [currentLetter.pronunciation]);
 
   const handleGetFeedback = useCallback(async () => {
-    setIsLoading(true);
+    setError(null);
+    setIsLoadingChat(true);
     try {
-      const response = await fetch(`/api/chat`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: [
             {
               role: "user",
-              content: `I am learning the Punjabi letter ${currentLetter.character} (${currentLetter.name}). Give me an encouraging word in Punjabi and English.`,
-            },
-          ],
+              content: `I am learning the Punjabi letter ${currentLetter.character} (${currentLetter.name}). Give me a brief, encouraging message.`
+            }
+          ]
         }),
       });
 
       if (!response.ok) {
-        throw new Error(`Chat error: ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Chat failed with status ${response.status}`);
       }
 
       const data = await response.json();
-      if (data.response) {
-        setAiFeedback(data.response);
-      } else {
-        throw new Error("No response from AI");
-      }
-    } catch (err) {
-      console.error("LLM error:", err);
-      setAiFeedback("Sorry, I'm having trouble thinking. Try again.");
+      setAiResponse(data.response);
+    } catch (err: any) {
+      console.error("Chat error:", err);
+      setError(err.message || "Failed to get AI feedback.");
     } finally {
-      setIsLoading(false);
+      setIsLoadingChat(false);
     }
   }, [currentLetter.character, currentLetter.name]);
 
+  const handleSubmitChoice = (choiceChar: string) => {
+    setSelected(choiceChar);
+    if (choiceChar === currentLetter.character) {
+      setXp((prev) => prev + 25);
+      setStreak((prev) => prev + 1);
+    } else {
+      setStreak(0);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
   return (
-    <main className="mx-auto flex min-h-screen max-w-7xl flex-col gap-6 px-4 py-6 md:px-6 lg:px-8">
-      <header className="glass flex flex-col gap-4 rounded-[2rem] p-6 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="text-sm uppercase tracking-[0.3em] text-white/50">
-            Punjabi Teacher
-          </p>
-          <h1 className="mt-2 text-3xl font-semibold md:text-4xl">
-            Learn Gurmukhi with a simple, focused lesson flow.
-          </h1>
+    <main className="relative mx-auto flex max-w-7xl flex-col items-center gap-8 p-6 md:p-12">
+      
+      <header className="flex w-full max-w-4xl items-center justify-between rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl md:p-6">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-3xl font-bold tracking-tight text-white md:text-4xl">Punjabi Teacher</h1>
+          <p className="text-sm text-white/60">Learn the Gurmukhi alphabet with AI</p>
         </div>
-        <div className="flex items-center gap-3 text-sm text-white/70">
-          {/* Listen button */}
-          <button
-            onClick={handleListen}
-            disabled={isLoading}
-            className={`inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 transition hover:bg-white/10 ${
-              isLoading ? "opacity-50" : ""
-            }`}
-          >
-            {isLoading ? (
-              <Pause className="mr-1 h-4 w-4 animate-spin" />
-            ) : (
-              <Mic className="mr-1 h-4 w-4" />
-            )}
-            Listen
-          </button>
-          {/* AI Feedback button */}
-          <button
-            onClick={handleGetFeedback}
-            disabled={isLoading}
-            className={`inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 transition hover:bg-white/10 ${
-              isLoading ? "opacity-50" : ""
-            }`}
-          >
-            {isLoading ? (
-              <Pause className="mr-1 h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="mr-1 h-4 w-4" />
-            )}
-            Get AI Feedback
-          </button>
-          {/* Writing later badge (placeholder) */}
-          <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
-            <PenTool className="mr-1 h-4 w-4" />
-            Writing later
-          </span>
+        <div className="flex items-center gap-4">
+          <div className="text-right">
+            <p className="text-xs text-white/50 uppercase tracking-wider">Daily Streak</p>
+            <p className="text-xl font-bold text-mango">{streak}</p>
+          </div>
+          <div className="h-8 w-px bg-white/10" />
+          <div className="text-right">
+            <p className="text-xs text-white/50 uppercase tracking-wider">Total XP</p>
+            <p className="text-xl font-bold text-mint">{xp}</p>
+          </div>
         </div>
       </header>
 
-      {/* AI Feedback Display */}
-      {aiFeedback && (
-        <div className="glass rounded-[2rem] p-4 mb-4">
-          <p className="text-sm text-white/70 mb-1">AI Tutor says:</p>
-          <p className="text-white">{aiFeedback}</p>
+      {aiResponse && (
+        <div className="w-full max-w-4xl animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="relative rounded-2xl border-2 border-mint/30 bg-mint/10 p-5 shadow-[0_0_20px_rgba(74,222,128,0.1)] backdrop-blur-xl">
+            <button onClick={() => setAiResponse(null)} className="absolute right-3 top-3 rounded-full p-1 text-white/50 hover:bg-white/10 hover:text-white">
+              <Sparkles size={16} />
+            </button>
+            <h3 className="mb-1 text-lg font-semibold text-white flex items-center gap-2">
+              <Star className="text-mint" size={20} /> AI Tutor says:
+            </h3>
+            <p className="text-sm leading-relaxed text-white/90">{aiResponse}</p>
+          </div>
+        </div>
+      )}
+      
+      {error && (
+        <div className="w-full max-w-4xl animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="rounded-2xl border-2 border-rose-400/30 bg-rose-500/10 p-5 backdrop-blur-xl">
+            <h3 className="mb-1 flex items-center gap-2 text-lg font-semibold text-rose-300">
+              <RotateCcw size={20} /> Error
+            </h3>
+            <p className="text-sm leading-relaxed text-white/90">{error}</p>
+            <button onClick={() => setError(null)} className="mt-3 text-xs text-rose-300/70 underline hover:text-rose-300">Dismiss</button>
+          </div>
         </div>
       )}
 
-      <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-        <div className="grid gap-6">
-          <ProgressBar xp={xp} streak={streak} progress={progress} />
+      <div className="grid w-full max-w-6xl gap-8 lg:grid-cols-3">
+        
+        <div className="col-span-2 flex flex-col gap-6">
+          
+          <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur-xl md:p-12">
+            <div className="mb-8 flex flex-wrap gap-2">
+              {stages.map((s, i) => (
+                <button 
+                  key={s} 
+                  onClick={() => setStage(s)}
+                  className={`rounded-full px-4 py-1.5 text-xs font-medium transition-all duration-300 ${stage === s ? 'bg-white text-slate-900 shadow-lg' : 'bg-black/20 text-white/60 hover:bg-black/40'}`}
+                >
+                  {stageLabels[i]}
+                </button>
+              ))}
+            </div>
 
-          <div className="glass rounded-[2rem] p-6">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-sm uppercase tracking-[0.2em] text-white/45">
-                  Current lesson
-                </p>
-                <h2 className="mt-1 text-2xl font-semibold">
-                  {currentLetter.character} - {currentLetter.name}
+            <div className="flex flex-col items-center gap-8">
+              <div className="flex items-center justify-center">
+                <h2 className="text-[9rem] font-extrabold leading-none text-mango md:text-[12rem] bg-gradient-to-b from-mango to-amber-500 bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(255,159,28,0.5)]">
+                  {currentLetter.character}
                 </h2>
               </div>
-              <div className="flex gap-2 rounded-full bg-black/20 p-1">
-                {stageLabels.map((label, index) => (
-                  <button
-                    key={label}
-                    onClick={() => setStage(stages[index])}
-                    className={`rounded-full px-3 py-1 text-sm transition ${
-                      stage === stages[index]
-                        ? "bg-white text-slate-950"
-                        : "text-white/70 hover:text-white"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
+              
+              <div className="text-center">
+                <p className="text-lg text-white/40 uppercase tracking-[0.2em]">{currentLetter.name}</p>
+                <p className="mt-2 text-3xl font-bold text-mint">{currentLetter.pronunciation}</p>
+                <p className="mt-1 text-sm text-white/30">Letter #{currentLetter.order}</p>
               </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-center">
-              <div className="rounded-[2rem] bg-gradient-to-br from-white/10 to-white/5 p-6">
-                <div className="text-8xl font-bold leading-none text-mango md:text-[8.5rem]">
-                  {currentLetter.character}
-                </div>
-                <p className="mt-4 max-w-xl text-sm leading-6 text-white/65">
-                  This scaffold shows the learning flow, progress, and
-                  interaction states. The LLM, TTS, and STT integrations will be
-                  connected later.
-                </p>
-                <div className="mt-6 flex flex-wrap gap-3">
-                  <ActionButton icon={<Play size={16} />} label="Play sample" />
-                  <ActionButton icon={<CheckCircle2 size={16} />} label="Mark learned" />
-                </div>
-              </div>
-
-              <div className="min-w-[220px]">
-                <div className="rounded-[2rem] border border-white/10 bg-slate-950/40 p-4">
-                  <div className="text-xs uppercase tracking-[0.2em] text-white/45">
-                    Pronunciation
-                  </div>
-                  <div className="mt-2 text-2xl font-semibold text-mint">
-                    {currentLetter.pronunciation}
-                  </div>
-                  <div className="mt-4 text-sm text-white/60">
-                    Order #{currentLetter.order}
-                  </div>
-                </div>
-              </div>
+            <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <button 
+                onClick={handleListen} 
+                disabled={isLoadingTts || isPlaying}
+                className={`flex w-full sm:w-auto items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-bold transition-all duration-200 ${isPlaying ? 'bg-mint text-slate-900' : 'bg-saffron text-slate-900 hover:brightness-110'} disabled:opacity-50 disabled:cursor-not-allowed shadow-glow`}
+              >
+                {isLoadingTts ? <Loader2 className="animate-spin" size={18} /> : isPlaying ? <Volume2 size={18} /> : <Volume2 size={18} />}
+                <span>{isPlaying ? 'Playing...' : isLoadingTts ? 'Generating...' : 'Listen'}</span>
+              </button>
+              
+              <button 
+                onClick={handleGetFeedback}
+                disabled={isLoadingChat}
+                className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-6 py-3 text-sm font-bold text-white transition-all duration-200 hover:bg-white/10 hover:border-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoadingChat ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} />}
+                <span>{isLoadingChat ? 'Thinking...' : 'Get AI Feedback'}</span>
+              </button>
             </div>
+            
+            <audio ref={audioRef} onEnded={() => setIsPlaying(false)} onError={() => { setIsPlaying(false); setError("Audio playback failed"); }} />
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="glass rounded-[2rem] p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Pick the letter</h3>
-                <span className="text-sm text-white/50">Local interaction only</span>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
+          {stage === 'recognize' && (
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
+              <h3 className="mb-4 text-lg font-semibold text-white/90">Pick the correct letter</h3>
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                 {choices.map((letter) => {
-                  const isSelected = selected === letter.character;
-                  const isCorrect = selected === currentLetter.character && isSelected;
+                  const status = selected === letter.character ? (letter.character === currentLetter.character ? 'correct' : 'wrong') : 'default';
                   return (
                     <button
                       key={letter.character}
-                      onClick={() => submitChoice(letter.character)}
-                      className={`rounded-2xl border p-4 text-left transition ${isSelected
-                        ? isCorrect
-                          ? "border-mint bg-mint/15"
-                          : "border-rose-400 bg-rose-500/10"
-                        : "border-white/10 bg-white/5 hover:bg-white/10"}
-                    `}
+                      onClick={() => handleSubmitChoice(letter.character)}
+                      className={`flex flex-col items-center justify-center gap-2 rounded-2xl border p-6 text-center transition-all duration-200
+                        ${status === 'default' ? 'border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20' : ''}
+                        ${status === 'correct' ? 'border-mint bg-mint/20 text-mint shadow-[0_0_15px_rgba(74,222,128,0.2)]' : ''}
+                        ${status === 'wrong' ? 'border-rose-400 bg-rose-500/10 text-rose-400' : ''}
+                      `}
                     >
-                      <div className="text-3xl font-bold">{letter.character}</div>
-                      <div className="mt-2 text-sm text-white/65">{letter.name}</div>
+                      <span className="text-4xl font-bold">{letter.character}</span>
+                      <span className="text-xs text-white/50">{letter.name}</span>
                     </button>
                   );
                 })}
               </div>
             </div>
+          )}
 
-            <div className="glass rounded-[2rem] p-6">
-              <h3 className="mb-4 text-lg font-semibold">Trace area</h3>
-              <div className="flex h-52 items-center justify-center rounded-[1.5rem] border border-dashed border-white/15 bg-black/20">
-                <div className="text-center text-white/45">
-                  <PenTool className="mx-auto mb-3" size={28} />
-                  Canvas placeholder for future handwriting input
+          {stage === 'learn' && (
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl text-center">
+              <p className="text-white/60">Listen to the pronunciation and study the letter. Click &quot;Get AI Feedback&quot; to hear from the tutor.</p>
+            </div>
+          )}
+
+        </div>
+
+        <div className="col-span-1 flex flex-col gap-6">
+          
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
+            <h3 className="mb-4 text-lg font-semibold text-white/90">Progress</h3>
+            <div className="space-y-4">
+              <div>
+                <div className="mb-1 flex justify-between text-xs font-medium text-white/50">
+                  <span>Current Progress</span>
+                  <span>{progress}%</span>
+                </div>
+                <div className="h-3 w-full rounded-full bg-white/10">
+                  <div className="h-full rounded-full bg-gradient-to-r from-saffron via-mango to-mint transition-all duration-500" style={{ width: `${progress}%` }} />
+                </div>
+              </div>
+              <div className="flex items-center gap-4 rounded-2xl bg-black/20 p-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-saffron/20">
+                  <Star size={20} className="text-saffron" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-white/60">Streak</p>
+                  <p className="text-2xl font-bold text-white">{streak}</p>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <aside className="grid gap-6">
-          <AgentAvatar />
-
-          <div className="glass rounded-[2rem] p-6">
-            <h3 className="mb-4 text-lg font-semibold">Lesson queue</h3>
-            <div className="grid gap-3">
+          <div className="flex-1 rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
+            <h3 className="mb-4 text-lg font-semibold text-white/90">Lesson Queue</h3>
+            <div className="flex flex-col gap-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
               {letters.map((letter, index) => (
                 <button
                   key={letter.character}
                   onClick={() => {
                     setCurrentLetterIndex(index);
                     setSelected(null);
+                    setAiResponse(null);
                   }}
-                  className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-left transition ${index === currentLetterIndex
-                    ? "border-saffron bg-saffron/15"
-                    : "border-white/10 bg-white/5 hover:bg-white/10"}`}
+                  className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-left transition-all duration-200 ${
+                    index === currentLetterIndex
+                      ? "border-saffron bg-saffron/10 shadow-[0_0_10px_rgba(234,88,12,0.1)]"
+                      : "border-white/5 bg-white/5 hover:bg-white/10"
+                  }`}
                 >
-                  <div>
-                    <div className="text-xl font-semibold">{letter.character}</div>
-                    <div className="text-sm text-white/55">{letter.name}</div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl font-bold">{letter.character}</span>
+                    <div className="flex flex-col">
+                      <span className="text-sm text-white/70">{letter.name}</span>
+                      <span className="text-xs text-white/30">{letter.pronunciation}</span>
+                    </div>
                   </div>
-                  <div className="text-sm text-white/45">#{letter.order}</div>
+                  <span className="text-xs text-white/30">#{letter.order}</span>
                 </button>
               ))}
             </div>
+            
+            <div className="mt-6">
+              <button
+                onClick={handleNextLetter}
+                className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-plum to-saffron px-4 py-3 text-sm font-bold text-white transition-all duration-200 hover:shadow-glow"
+              >
+                Next Letter <ArrowRight size={18} className="transition-transform duration-200 group-hover:translate-x-1" />
+              </button>
+            </div>
           </div>
 
-          <button
-            onClick={nextLetter}
-            className="rounded-2xl bg-gradient-to-r from-plum to-saffron px-5 py-4 font-semibold text-white shadow-glow transition hover:opacity-95"
-          >
-            Next letter
-          </button>
-        </aside>
-      </section>
+        </div>
+      </div>
     </main>
-  );
-}
-
-function Badge({ icon, label }: { icon: ReactNode; label: string }) {
-  return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
-      {icon}
-      {label}
-    </span>
-  );
-}
-
-function ActionButton({ icon, label }: { icon: ReactNode; label: string }) {
-  return (
-    <button className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white/85 transition hover:bg-white/10">
-      {icon}
-      {label}
-    </button>
   );
 }
