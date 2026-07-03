@@ -69,33 +69,26 @@
   --z-index-modal: 1050;
   --z-index-popover: 1060;
   --z-index-tooltip: 1070;
+
+  /* Added for theme */
+  --bg: #FFFFFF;
+  --text: #212121;
+  --text-h: #212121;
 }
 
-/* Dark Mode Support */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background-dark: #121212;
-    --surface-dark: #1E1E1E;
-    --surface-variant-dark: #2C2C2C;
-    --on-background-dark: #E0E0E0;
-    --on-surface-dark: #FFFFFF;
-    
-    --saFFron-dark: #FFB74D;
-    --emerald-dark: #81C784;
-    --royal-blue-dark: #64B5F6;
-    --cream-dark: #2D2D2D;
-    --charcoal-dark: #FFFFFF;
-    
-    --text: var(--on-background-dark);
-    --text-h: var(--on-surface-dark);
-    --bg: var(--background-dark);
-    --border: var(--surface-variant-dark);
-    --saFFron: var(--saFFron-dark);
-    --emerald: var(--emerald-dark);
-    --royal-blue: var(--royal-blue-dark);
-    --cream: var(--cream-dark);
-    --charcoal: var(--charcoal-dark);
-  }
+/* Dark Mode */
+.dark {
+  --bg: #121212;
+  --text: #E0E0E0;
+  --text-h: #FFFFFF;
+  --saFFron: #FFB74D;
+  --emerald: #81C784;
+  --royal-blue: #64B5F6;
+  /* Keep other colors:
+{
+  background-color: #FFB74D;
+background-color: #FFB74D;
+} */
 }
 
 /* Base Styles */
@@ -284,7 +277,7 @@ a:hover {
 
 /* Card Styles */
 .card {
-  background-color: white;
+  background-color: var(--bg);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
   overflow: hidden;

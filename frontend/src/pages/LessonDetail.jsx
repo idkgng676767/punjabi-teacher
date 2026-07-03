@@ -29,10 +29,10 @@ const LessonDetail = () => {
   const handleComplete = async () => {
     try {
       await axios.post(
-        '/api/progress',
-        { xpEarned: 10, lessonCompleted: true },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+              '/api/progress',
+              { xpEarned: 10, lessonCompleted: true },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
       alert('Lesson completed! Earned 10 XP.');
       navigate(-1);
     } catch (err) {
