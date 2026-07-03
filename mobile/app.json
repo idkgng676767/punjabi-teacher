@@ -1,0 +1,7 @@
+{
+  "name": "mobile",
+  "slug": "mobile",
+  "plugins": [
+    "expo-sqlite"
+  ]
+}
