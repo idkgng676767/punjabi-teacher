@@ -58,7 +58,7 @@ interface State {
   lessons: Lesson[] | null;
   lessonDetail: Lesson | null;
   leaderboard: LeaderboardEntry[] | null;
-  profile: User | null; // We'll reuse User for profile, but it might have extra fields
+  profile: User | null;
   isLoading: boolean;
   error: string | null;
 }
@@ -116,10 +116,10 @@ export const useStore = create<State & Actions>((set, get) => ({
     }
   },
 
-  register: async (name: string, email: string, password: string) => {
+  register: async (name: string, email: string, price: string) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await fetch('http://localhost:5001/api/auth/register', {
+      const response = await fetch('http://localhost:5001/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password }),
@@ -199,7 +199,6 @@ export const useStore = create<State & Actions>((set, get) => ({
       }
 
       set({ isLoading: false });
-      // Optionally, we could refetch the lesson to update its state, but we'll just rely on the component to show success and go back.
     } catch (error: any) {
       set({ error: error.message, isLoading: false });
       throw error;
@@ -239,7 +238,7 @@ export const useStore = create<State & Actions>((set, get) => ({
       if (!response.ok) {
         throw new Error('Failed to fetch profile');
       }
-      const data: User = await response.json(); // Assuming the backend returns the user object
+      const data: User = await response.json();
       set({ profile: data, isLoading: false });
     } catch (error: any) {
       set({ error: error.message, isLoading: false });
