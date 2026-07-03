@@ -1,8 +1,8 @@
 "use client";
 
-import { CheckCircle2, Mic, PenTool, Play, Sparkles } from "lucide-react";
+import { CheckCircle2, Mic, PenTool, Play, Sparkles, Pause } from "lucide-react";
 import type { ReactNode } from "react";
-import { useMemo, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { ProgressBar } from "@/components/ProgressBar";
 import { letters, stageLabels } from "@/lib/letters";
@@ -16,30 +16,107 @@ export function LessonScreen() {
   const [selected, setSelected] = useState<string | null>(null);
   const [xp, setXp] = useState(120);
   const [streak, setStreak] = useState(4);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [aiFeedback, setAiFeedback] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const currentLetter = letters[currentLetterIndex];
   const progress = Math.round(((currentLetterIndex + 1) / letters.length) * 100);
 
-  const choices = useMemo(() => {
-    const pool = letters
-      .filter((letter) => letter.character !== currentLetter.character)
-      .slice(0, 3);
-    return [currentLetter, ...pool].sort(() => Math.random() - 0.5);
-  }, [currentLetter]);
+  // Choices without random sort to avoid hydration mismatch
+  const choices = [
+    currentLetter,
+    ...letters
+      .filter((l) => l.character !== currentLetter.character)
+      .slice(0, 3),
+  ];
 
   const submitChoice = (character: string) => {
     setSelected(character);
     if (character === currentLetter.character) {
-      setXp((value) => value + 10);
-      setStreak((value) => value + 1);
+      setXp((v) => v + 10);
+      setStreak((v) => v + 1);
     }
   };
 
   const nextLetter = () => {
     setSelected(null);
-    setCurrentLetterIndex((value) => (value + 1) % letters.length);
+    setCurrentLetterIndex((v) => (v + 1) % letters.length);
     setStage("learn");
+    setAiFeedback(null);
+    setAudioUrl(null);
   };
+
+  const handleListen = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/tts`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text: currentLetter.pronunciation }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`TTS error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.audio) {
+        setAudioUrl(`data:${data.contentType};base64,${data.audio}`);
+        // Play audio
+        if (audioRef.current) {
+          audioRef.current.src = audioUrl ?? "";
+          audioRef.current.play();
+        }
+      } else {
+        throw new Error("No audio data returned");
+      }
+    } catch (err) {
+      console.error("TTS error:", err);
+      setAiFeedback("Sorry, I couldn't generate audio. Try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentLetter.pronunciation]);
+
+  const handleGetFeedback = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messages: [
+            {
+              role: "user",
+              content: `I am learning the Punjabi letter ${currentLetter.character} (${currentLetter.name}). Give me an encouraging word in Punjabi and English.`,
+            },
+          ],
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Chat error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.response) {
+        setAiFeedback(data.response);
+      } else {
+        throw new Error("No response from AI");
+      }
+    } catch (err) {
+      console.error("LLM error:", err);
+      setAiFeedback("Sorry, I'm having trouble thinking. Try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentLetter.character, currentLetter.name]);
 
   return (
     <main className="mx-auto flex min-h-screen max-w-7xl flex-col gap-6 px-4 py-6 md:px-6 lg:px-8">
@@ -53,11 +130,51 @@ export function LessonScreen() {
           </h1>
         </div>
         <div className="flex items-center gap-3 text-sm text-white/70">
-          <Badge icon={<Sparkles size={14} />} label="AI off for now" />
-          <Badge icon={<Mic size={14} />} label="Voice later" />
-          <Badge icon={<PenTool size={14} />} label="Writing later" />
+          {/* Listen button */}
+          <button
+            onClick={handleListen}
+            disabled={isLoading}
+            className={`inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 transition hover:bg-white/10 ${
+              isLoading ? "opacity-50" : ""
+            }`}
+          >
+            {isLoading ? (
+              <Pause className="mr-1 h-4 w-4 animate-spin" />
+            ) : (
+              <Mic className="mr-1 h-4 w-4" />
+            )}
+            Listen
+          </button>
+          {/* AI Feedback button */}
+          <button
+            onClick={handleGetFeedback}
+            disabled={isLoading}
+            className={`inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 transition hover:bg-white/10 ${
+              isLoading ? "opacity-50" : ""
+            }`}
+          >
+            {isLoading ? (
+              <Pause className="mr-1 h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="mr-1 h-4 w-4" />
+            )}
+            Get AI Feedback
+          </button>
+          {/* Writing later badge (placeholder) */}
+          <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
+            <PenTool className="mr-1 h-4 w-4" />
+            Writing later
+          </span>
         </div>
       </header>
+
+      {/* AI Feedback Display */}
+      {aiFeedback && (
+        <div className="glass rounded-[2rem] p-4 mb-4">
+          <p className="text-sm text-white/70 mb-1">AI Tutor says:</p>
+          <p className="text-white">{aiFeedback}</p>
+        </div>
+      )}
 
       <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
         <div className="grid gap-6">
@@ -136,13 +253,12 @@ export function LessonScreen() {
                     <button
                       key={letter.character}
                       onClick={() => submitChoice(letter.character)}
-                      className={`rounded-2xl border p-4 text-left transition ${
-                        isSelected
-                          ? isCorrect
-                            ? "border-mint bg-mint/15"
-                            : "border-rose-400 bg-rose-500/10"
-                          : "border-white/10 bg-white/5 hover:bg-white/10"
-                      }`}
+                      className={`rounded-2xl border p-4 text-left transition ${isSelected
+                        ? isCorrect
+                          ? "border-mint bg-mint/15"
+                          : "border-rose-400 bg-rose-500/10"
+                        : "border-white/10 bg-white/5 hover:bg-white/10"}
+                    `}
                     >
                       <div className="text-3xl font-bold">{letter.character}</div>
                       <div className="mt-2 text-sm text-white/65">{letter.name}</div>
@@ -177,11 +293,9 @@ export function LessonScreen() {
                     setCurrentLetterIndex(index);
                     setSelected(null);
                   }}
-                  className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-left transition ${
-                    index === currentLetterIndex
-                      ? "border-saffron bg-saffron/15"
-                      : "border-white/10 bg-white/5 hover:bg-white/10"
-                  }`}
+                  className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-left transition ${index === currentLetterIndex
+                    ? "border-saffron bg-saffron/15"
+                    : "border-white/10 bg-white/5 hover:bg-white/10"}`}
                 >
                   <div>
                     <div className="text-xl font-semibold">{letter.character}</div>
@@ -205,13 +319,7 @@ export function LessonScreen() {
   );
 }
 
-function Badge({
-  icon,
-  label
-}: {
-  icon: ReactNode;
-  label: string;
-}) {
+function Badge({ icon, label }: { icon: ReactNode; label: string }) {
   return (
     <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
       {icon}
@@ -220,13 +328,7 @@ function Badge({
   );
 }
 
-function ActionButton({
-  icon,
-  label
-}: {
-  icon: ReactNode;
-  label: string;
-}) {
+function ActionButton({ icon, label }: { icon: ReactNode; label: string }) {
   return (
     <button className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white/85 transition hover:bg-white/10">
       {icon}
