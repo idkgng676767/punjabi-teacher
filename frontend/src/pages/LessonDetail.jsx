@@ -27,19 +27,19 @@ const LessonDetail = () => {
   }, [id]);
 
   const handleComplete = async () => {
-    try {
-      await axios.post(
-              '/api/progress',
-              { xpEarned: 10, lessonCompleted: true },
-              { headers: { Authorization: `Bearer ${token}` } }
-            );
-      alert('Lesson completed! Earned 10 XP.');
-      navigate(-1);
-    } catch (err) {
-      console.error('Error completing lesson:', err);
-      alert('Failed to complete lesson');
-    }
-  };
+      try {
+        await axios.post(
+          '/api/progress',
+          { xpEarned: 10, lessonCompleted: true },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        alert('Lesson completed! Earned 10 XP.');
+        navigate(-1);
+      } catch (err) {
+        console.error('Error completing lesson:', err);
+        alert('Failed to complete lesson');
+      }
+    };
 
   const renderLetterUnit = (lesson, handleComplete) => {
     return (
