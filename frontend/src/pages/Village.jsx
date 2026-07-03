@@ -26,7 +26,7 @@ const Village = () => {
       if (token) {
         try {
           const res = await axios.get('/api/profile', {
-            headers: { Authorization: *** ${token}` }
+            headers: { Authorization: `Bearer ${token}` }
           });
           setUserData(res.data);
           setLoading(false);

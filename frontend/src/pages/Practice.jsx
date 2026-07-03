@@ -102,7 +102,7 @@ const Practice = () => {
       // Calculate score for timed challenge
       setScore(currentIndex); // In timed mode, currentIndex is the number of correct answers
     }
-    
+
     return () => {
       if (timerInterval) clearInterval(timerInterval);
     };
@@ -117,7 +117,7 @@ const Practice = () => {
       // Start timer when first next is clicked in timed mode
       setTimerActive(true);
     }
-    
+
     if (practiceMode === 'timed') {
       // In timed mode, we only increment if the answer was correct
       // For simplicity, we'll assume they got it right if they moved on
@@ -130,7 +130,7 @@ const Practice = () => {
       // For other modes, just move to next item
       setCurrentIndex((prev) => (prev + 1) % flashcards.length);
       setShowAnswer(false);
-      
+
       // Reset writing input for writing mode
       if (practiceMode === 'writing') {
         setWritingInput('');
@@ -146,7 +146,7 @@ const Practice = () => {
       const audio = new Audio(currentWord.audioUrl);
       audio.play().catch(e => console.log('Audio play failed:', e));
     }
-    
+
     // Auto-stop listening after audio plays
     setTimeout(() => {
       setIsListening(false);
@@ -160,31 +160,31 @@ const Practice = () => {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
       let audioChunks = [];
-      
+
       mediaRecorder.addEventListener("dataavailable", event => {
         audioChunks.push(event.data);
       });
-      
+
       mediaRecorder.addEventListener("stop", () => {
         const audioBlob = new Blob(audioChunks);
         const audioUrl = URL.createObjectURL(audioBlob);
         const audio = new Audio(audioUrl);
-        
+
         // Play back the recording so user can hear themselves
         audio.play().then(() => {
           // In a real app, we'd send this to speech-to-text API
           // For now, we'll simulate a transcription attempt
           setTranscript("ਅ"); // Simulated transcription
           setIsRecording(false);
-          
+
           // Clean up
           stream.getTracks().forEach(track => track.stop());
           URL.revokeObjectURL(audioUrl);
         });
       });
-      
+
       mediaRecorder.start();
-      
+
       // Stop recording after 5 seconds
       setTimeout(() => {
         mediaRecorder.stop();
@@ -196,8 +196,9 @@ const Practice = () => {
     }
   };
 
-  const handleWritingCheck = (currentWord;
-  }
+  const handleWritingCheck = (currentWord) => {
+    return writingInput === currentWord.character;
+  };
 
   const handleWritingChange = (e) => {
     setWritingInput(e.target.value);
@@ -259,13 +260,13 @@ const Practice = () => {
             Timed Challenge
           </button>
         </div>
-        
+
         {practiceMode === 'timed' && timerActive && (
           <div className="timer">
             Time left: {timer} seconds
           </div>
         )}
-        
+
         {practiceMode === 'timed' && showResults && (
           <div className="results">
             <h2>Time's up!</h2>
@@ -275,13 +276,13 @@ const Practice = () => {
             </Link>
           </div>
         )}
-        
+
         {!showResults && (
           <>
             <div className="practice-content">
               {practiceMode === 'listening' && (
                 <>
-                  <h2>Listen and Translate</p>
+                  <h2>Listen and Translate</h2>
                   <div className="listening-card">
                     <div className="listen-prompt">
                       Listen to the audio and type the transliteration:
@@ -325,7 +326,7 @@ const Practice = () => {
               )}
               {practiceMode === 'speaking' && (
                 <>
-                  <h2>Speak and Practice</p>
+                  <h2>Speak and Practice</h2>
                   <div className="speaking-card">
                     <div className="speak-prompt">
                       Press the button, say the character clearly, then listen to your pronunciation:
@@ -359,7 +360,7 @@ const Practice = () => {
               )}
               {practiceMode === 'writing' && (
                 <>
-                  <h2>Writing Practice</p>
+                  <h2>Writing Practice</h2>
                   <div className="writing-card">
                     <div className="write-prompt">
                       Write the following character:
@@ -418,7 +419,7 @@ const Practice = () => {
                 </div>
               )}
             </div>
-            
+
             <div className="controls">
               {practiceMode === 'listening' && (
                 <>
