@@ -1,30 +1,53 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { Link } from 'react-router-dom';
+import { getAuthToken } from '../utils/auth';
 
 const Leaderboard = () => {
   const [leaderboard, setLeaderboard] = useState([]);
   const [loading, setLoading] = useState(true);
-  const token = localStorage.getItem('token');
+  const [error, setError] = useState('');
+  const token = getAuthToken();
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
-      if (token) {
-        try {
-          const res = await axios.get('/api/leaderboard', {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          setLeaderboard(res.data);
-        } catch (err) {
-          console.error('Error fetching leaderboard:', err);
-        }
+      if (!token) {
+        setLoading(false);
+        return;
       }
-      setLoading(false);
+
+      try {
+        const res = await axios.get('/api/leaderboard', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (Array.isArray(res.data)) {
+          setLeaderboard(res.data);
+        }
+      } catch (err) {
+        setError(err?.response?.data?.message || 'Unable to load leaderboard.');
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchLeaderboard();
   }, [token]);
 
   if (loading) return <div>Loading leaderboard...</div>;
+
+  if (!token) {
+    return (
+      <div className="leaderboard-page">
+        <div className="profile-card">
+          <h1>Sign in required</h1>
+          <p>The leaderboard comes from live learner accounts.</p>
+          <Link to="/auth" className="btn-primary">Sign in</Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) return <div className="leaderboard-page">{error}</div>;
 
   return (
     <div className="leaderboard-page">

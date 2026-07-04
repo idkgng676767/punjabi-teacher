@@ -5,6 +5,10 @@
   --royal-blue: #000080;
   --cream: #FFF8E7;
   --charcoal: #2D2D2D;
+  --bg: #0b0712;
+  --text: #f3eefe;
+  --text-h: #ffffff;
+  --border: rgba(191, 0, 255, 0.18);
 
   /* Secondary Palette */
   --wheat: #F5DEB3;
@@ -70,25 +74,28 @@
   --z-index-popover: 1060;
   --z-index-tooltip: 1070;
 
-  /* Added for theme */
-  --bg: #FFFFFF;
-  --text: #212121;
-  --text-h: #212121;
 }
 
-/* Dark Mode */
+.light {
+  --bg: #fffaf2;
+  --text: #1f1626;
+  --text-h: #120e1c;
+  --border: rgba(31, 22, 38, 0.1);
+  --saFFron: #ff9933;
+  --emerald: #138808;
+  --royal-blue: #000080;
+  color-scheme: light;
+}
+
 .dark {
-  --bg: #121212;
-  --text: #E0E0E0;
-  --text-h: #FFFFFF;
-  --saFFron: #FFB74D;
-  --emerald: #81C784;
-  --royal-blue: #64B5F6;
-  /* Keep other colors:
-{
-  background-color: #FFB74D;
-background-color: #FFB74D;
-} */
+  --bg: #0b0712;
+  --text: #f3eefe;
+  --text-h: #ffffff;
+  --border: rgba(191, 0, 255, 0.18);
+  --saFFron: #ffb74d;
+  --emerald: #81c784;
+  --royal-blue: #64b5f6;
+  color-scheme: dark;
 }
 
 /* Base Styles */
@@ -110,8 +117,8 @@ body {
   color: var(--text);
   background-color: var(--bg);
   background-image: 
-    radial-gradient(circle at 20% 80%, rgba(255, 153, 51, 0.05) 0%, transparent 20%),
-    radial-gradient(circle at 80% 20%, rgba(19, 136, 8, 0.05) 0%, transparent 20%);
+    radial-gradient(circle at 20% 80%, rgba(191, 0, 255, 0.12) 0%, transparent 24%),
+    radial-gradient(circle at 80% 20%, rgba(255, 153, 51, 0.08) 0%, transparent 20%);
   min-height: 100vh;
   color-scheme: light dark;
 }

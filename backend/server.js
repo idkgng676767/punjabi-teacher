@@ -3,6 +3,8 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
+const { loadState, persistState } = require('./storage');
+const { scoreSpeechAttempt, scoreHandwritingAttempt } = require('./practice_scoring');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -18,10 +20,14 @@ const JWT_SECRET = process.env.JWT_SECRET;
 app.use(cors());
 app.use(express.json());
 
-// In-memory storage for users (in a real app, use a database)
-// TODO: Replace with proper database implementation
-let users = [];
-let userIdCounter = 1;
+// Database-backed user storage loaded through the storage adapter.
+const initialState = loadState();
+let users = initialState.users;
+let userIdCounter = initialState.userIdCounter;
+
+function saveCurrentState() {
+  persistState({ users, userIdCounter });
+}
 
 // Lesson data structured according to PunjabiLingo curriculum plan
 const lessons = [
@@ -246,6 +252,7 @@ app.post('/api/auth/signup', async (req, res) => {
     };
 
     users.push(newUser);
+    saveCurrentState();
 
     // Generate JWT token
     const token = jwt.sign({ userId: newUser.id }, JWT_SECRET, { expiresIn: '7d' });
@@ -295,6 +302,7 @@ app.post('/api/auth/login', async (req, res) => {
 
     // Update last login
     user.lastLogin = new Date();
+    saveCurrentState();
 
     // Generate JWT token
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
@@ -361,7 +369,8 @@ app.get('/api/profile', authenticateToken, (req, res) => {
     lastLogin: user.lastLogin,
     totalLessonsCompleted: user.totalLessonsCompleted,
     achievements: user.achievements,
-    preferences: user.preferences
+      preferences: user.preferences,
+      xpToNextLevel: calculateXPToNextLevel(user.xp)
   });
 });
 
@@ -452,6 +461,45 @@ app.post('/api/progress', authenticateToken, (req, res) => {
     user: responseUser,
     newAchievements: newAchievements.length > 0 ? newAchievements : []
   });
+  saveCurrentState();
+});
+
+app.post('/api/practice/speech-score', (req, res) => {
+  try {
+    const { expectedText, transcript, confidence } = req.body;
+
+    if (!expectedText || !transcript) {
+      return res.status(400).json({ message: 'Expected text and transcript are required' });
+    }
+
+    const result = scoreSpeechAttempt({ expectedText, transcript, confidence });
+    res.json(result);
+  } catch (error) {
+    console.error('Speech scoring error:', error);
+    res.status(500).json({ message: 'Error scoring speech attempt' });
+  }
+});
+
+app.post('/api/practice/handwriting-score', (req, res) => {
+  try {
+    const { expectedCharacter, strokes, canvasWidth, canvasHeight } = req.body;
+
+    if (!expectedCharacter) {
+      return res.status(400).json({ message: 'Expected character is required' });
+    }
+
+    const result = scoreHandwritingAttempt({
+      expectedCharacter,
+      strokes,
+      canvasWidth,
+      canvasHeight,
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('Handwriting scoring error:', error);
+    res.status(500).json({ message: 'Error scoring handwriting attempt' });
+  }
 });
 
 // Helper function to calculate level from XP
@@ -675,6 +723,7 @@ app.put('/api/preferences', authenticateToken, (req, res) => {
       message: 'Preferences updated successfully', 
       preferences: user.preferences 
     });
+    saveCurrentState();
   } catch (error) {
     console.error('Error updating preferences:', error);
     res.status(500).json({ message: 'Error updating preferences' });
@@ -712,7 +761,9 @@ app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    version: '1.0.0'
+    version: '1.0.0',
+    users: users.length,
+    lessons: lessons.length
   });
 });
 

@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import { getLevelTitle } from '../utils/progression';
+import { getAuthToken } from '../utils/auth';
 
 const Village = () => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const token = localStorage.getItem('token');
+  const [error, setError] = useState('');
+  const token = getAuthToken();
 
-  // Building data with unlock requirements
   const buildings = [
     { id: 1, name: 'Kothi (Home)', icon: '🏠', unlockRequirement: 0, levelReq: 1, description: 'Your learning home base' },
     { id: 2, name: 'Tandoor', icon: '🔥', unlockRequirement: 50, levelReq: 5, description: 'Food vocabulary hub' },
@@ -23,18 +25,19 @@ const Village = () => {
 
   useEffect(() => {
     const fetchUserData = async () => {
-      if (token) {
-        try {
-          const res = await axios.get('/api/profile', {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          setUserData(res.data);
-          setLoading(false);
-        } catch (err) {
-          console.error('Error fetching user data:', err);
-          setLoading(false);
-        }
-      } else {
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const res = await axios.get('/api/profile', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setUserData(res.data);
+      } catch (err) {
+        setError(err?.response?.data?.message || 'Unable to load your village.');
+      } finally {
         setLoading(false);
       }
     };
@@ -43,10 +46,23 @@ const Village = () => {
   }, [token]);
 
   if (loading) return <div className="village-page">Loading...</div>;
-  if (!userData) return <div className="village-page">Please log in to view your village</div>;
 
-  // Calculate unlocked buildings based on level and XP
-  const unlockedBuildings = buildings.filter(building => 
+  if (!token) {
+    return (
+      <div className="village-page">
+        <div className="profile-card">
+          <h1>Sign in required</h1>
+          <p>Your village builds from your real progress data.</p>
+          <Link to="/auth" className="btn-primary">Sign in</Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) return <div className="village-page">{error}</div>;
+  if (!userData) return <div className="village-page">No village data available.</div>;
+
+  const unlockedBuildings = buildings.filter((building) =>
     userData.level >= building.levelReq || userData.xp >= building.unlockRequirement
   );
 
@@ -57,7 +73,7 @@ const Village = () => {
       </Link>
       <h1>Your Punjabi Village</h1>
       <p>Build your village as you learn Punjabi!</p>
-      
+
       <div className="user-stats">
         <div className="stat">
           <h3>Level</h3>
@@ -78,8 +94,8 @@ const Village = () => {
       </div>
 
       <div className="village-grid">
-        {buildings.map(building => {
-          const isUnlocked = userData.level >= building.levelReq || userData.xp >= building.unlockRequirement;
+        {buildings.map((building) => {
+          const isUnlocked = unlockedBuildings.some((item) => item.id === building.id);
           return (
             <div key={building.id} className={`building-card ${isUnlocked ? 'unlocked' : 'locked'}`}>
               <div className="building-icon">{building.icon}</div>
@@ -110,15 +126,5 @@ const Village = () => {
     </div>
   );
 };
-
-function getLevelTitle(level) {
-  if (level >= 501) return 'Punjab';
-  if (level >= 201) return 'Garden';
-  if (level >= 101) return 'Orchard';
-  if (level >= 51) return 'Tree';
-  if (level >= 26) return 'Sapling';
-  if (level >= 11) return 'Sprout';
-  return 'Seedling';
-}
 
 export default Village;

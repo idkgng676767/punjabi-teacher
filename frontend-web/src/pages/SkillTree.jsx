@@ -1,17 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import { getLevelTitle } from '../utils/progression';
+import { getAuthToken } from '../utils/auth';
 
 const SkillTree = () => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const token = localStorage.getItem('token');
+  const [error, setError] = useState('');
+  const token = getAuthToken();
 
-  // Define skill tree structure based on the plan
   const skillTree = {
     foundation: {
       title: 'Foundation Branch',
-      color: '#FF9933', // Saffron
+      color: '#FF9933',
       skills: [
         { id: 'gurmukhi-alphabet', name: 'Gurmukhi Alphabet', description: 'Learn all 35 Gurmukhi letters', icon: '🔤', requiredLevel: 1, requiredLessons: 1 },
         { id: 'basic-pronunciation', name: 'Basic Pronunciation', description: 'Master tones and basic sounds', icon: '🔊', requiredLevel: 5, requiredLessons: 3 },
@@ -20,7 +22,7 @@ const SkillTree = () => {
     },
     communication: {
       title: 'Communication Branch',
-      color: '#138808', // Emerald
+      color: '#138808',
       skills: [
         { id: 'greetings', name: 'Greetings & Introductions', description: 'Learn basic greetings and self-introduction', icon: '👋', requiredLevel: 2, requiredLessons: 2 },
         { id: 'family', name: 'Family & Relationships', description: 'Learn family terms and relationships', icon: '👨‍👩‍👧‍👦', requiredLevel: 4, requiredLessons: 4 },
@@ -32,7 +34,7 @@ const SkillTree = () => {
     },
     intermediate: {
       title: 'Intermediate Branch',
-      color: '#000080', // Royal Blue
+      color: '#000080',
       skills: [
         { id: 'tenses', name: 'Past, Present, Future Tenses', description: 'Master verb tenses in Punjabi', icon: '⏳', requiredLevel: 10, requiredLessons: 8 },
         { id: 'adjectives', name: 'Adjectives & Descriptions', description: 'Learn to describe people and things', icon: '📝', requiredLevel: 12, requiredLessons: 10 },
@@ -44,7 +46,7 @@ const SkillTree = () => {
     },
     advanced: {
       title: 'Advanced Branch',
-      color: '#800080', // Purple (not in original but we need a color)
+      color: '#800080',
       skills: [
         { id: 'formal-speech', name: 'Formal vs Informal Speech', description: 'Learn formal and informal registers', icon: '🤝', requiredLevel: 16, requiredLessons: 14 },
         { id: 'idioms', name: 'Idioms & Proverbs', description: 'Learn common idioms and proverbs', icon: '💬', requiredLevel: 18, requiredLessons: 16 },
@@ -56,7 +58,7 @@ const SkillTree = () => {
     },
     cultural: {
       title: 'Cultural Branch',
-      color: '#FF9933', // Saffron again or we can use a different shade
+      color: '#FF9933',
       skills: [
         { id: 'sikh-history', name: 'Sikh History & Gurbani', description: 'Learn Sikh history and Gurbani basics', icon: '🪔', requiredLevel: 25, requiredLessons: 22 },
         { id: 'music-poetry', name: 'Punjabi Music & Poetry', description: 'Explore Punjabi music and poetry', icon: '🎵', requiredLevel: 23, requiredLessons: 20 },
@@ -68,7 +70,7 @@ const SkillTree = () => {
     },
     shahmukhi: {
       title: 'Shahmukhi Branch (Parallel)',
-      color: '#008080', // Teal
+      color: '#008080',
       skills: [
         { id: 'shahmukhi-alphabet', name: 'Shahmukhi Alphabet', description: 'Learn the Shahmukhi script', icon: '🔤', requiredLevel: 30, requiredLessons: 25 },
         { id: 'gurmukhi-to-shmukhi', name: 'Gurmukhi to Shahmukhi Bridge', description: 'Learn to convert between scripts', icon: '🔄', requiredLevel: 32, requiredLessons: 28 },
@@ -80,18 +82,19 @@ const SkillTree = () => {
 
   useEffect(() => {
     const fetchUserData = async () => {
-      if (token) {
-        try {
-          const res = await axios.get('/api/profile', {
-            headers: { Authorization: *** ${token}` }
-          });
-          setUserData(res.data);
-          setLoading(false);
-        } catch (err) {
-          console.error('Error fetching user data:', err);
-          setLoading(false);
-        }
-      } else {
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const res = await axios.get('/api/profile', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setUserData(res.data);
+      } catch (err) {
+        setError(err?.response?.data?.message || 'Unable to load your skill tree.');
+      } finally {
         setLoading(false);
       }
     };
@@ -100,13 +103,23 @@ const SkillTree = () => {
   }, [token]);
 
   if (loading) return <div className="skill-tree-page">Loading...</div>;
-  if (!userData) return <div className="skill-tree-page">Please log in to view your skill tree</div>;
 
-  // Determine if a skill is unlocked based on user data
-  const isSkillUnlocked = (skill) => {
-    return userData.level >= skill.requiredLevel && 
-           userData.totalLessonsCompleted >= skill.requiredLessons;
-  };
+  if (!token) {
+    return (
+      <div className="skill-tree-page">
+        <div className="profile-card">
+          <h1>Sign in required</h1>
+          <p>Your skill tree is tied to live progress and completed lessons.</p>
+          <Link to="/auth" className="btn-primary">Sign in</Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) return <div className="skill-tree-page">{error}</div>;
+  if (!userData) return <div className="skill-tree-page">No skill tree data available.</div>;
+
+  const isSkillUnlocked = (skill) => userData.level >= skill.requiredLevel && userData.totalLessonsCompleted >= skill.requiredLessons;
 
   return (
     <div className="skill-tree-page">
@@ -115,7 +128,7 @@ const SkillTree = () => {
       </Link>
       <h1>Skill Tree</h1>
       <p>Unlock new skills as you learn Punjabi!</p>
-      
+
       <div className="user-stats">
         <div className="stat">
           <h3>Level</h3>
@@ -136,7 +149,7 @@ const SkillTree = () => {
           <div key={branchKey} className="skill-branch">
             <h2 style={{ color: branch.color }}>{branch.title}</h2>
             <div className="skills-grid">
-              {branch.skills.map(skill => {
+              {branch.skills.map((skill) => {
                 const unlocked = isSkillUnlocked(skill);
                 return (
                   <div key={skill.id} className={`skill-card ${unlocked ? 'unlocked' : 'locked'}`}>
@@ -155,8 +168,8 @@ const SkillTree = () => {
                     {unlocked && (
                       <div className="skill-unlocked">
                         <p>✅ Unlocked!</p>
-                        <Link to={`/lesson/${skill.id}`} className="btn-skill">
-                          Start Learning
+                        <Link to="/lessons" className="btn-skill">
+                          Explore lessons
                         </Link>
                       </div>
                     )}
@@ -170,15 +183,5 @@ const SkillTree = () => {
     </div>
   );
 };
-
-function getLevelTitle(level) {
-  if (level >= 501) return 'Punjab';
-  if (level >= 201) return 'Garden';
-  if (level >= 101) return 'Orchard';
-  if (level >= 51) return 'Tree';
-  if (level >= 26) return 'Sapling';
-  if (level >= 11) return 'Sprout';
-  return 'Seedling';
-}
 
 export default SkillTree;

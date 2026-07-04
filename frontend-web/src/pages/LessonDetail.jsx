@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { getLessonById } from '../data/lessons';
 
 const LessonDetail = () => {
   const { id } = useParams();
-  const [lesson, setLesson] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [lesson, setLesson] = useState(getLessonById(id));
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
@@ -14,12 +15,14 @@ const LessonDetail = () => {
     const fetchLesson = async () => {
       try {
         const res = await axios.get(`/api/lessons/${id}`);
-        setLesson(res.data);
-        setLoading(false);
+        if (res.data) {
+          setLesson(res.data);
+        }
       } catch (err) {
-        console.error('Error fetching lesson:', err);
-        setError('Failed to load lesson');
-        setLoading(false);
+        console.warn('Using local lesson data:', err);
+        if (!getLessonById(id)) {
+          setError('Failed to load lesson');
+        }
       }
     };
 

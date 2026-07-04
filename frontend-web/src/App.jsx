@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Home from './pages/Home';
 import Lessons from './pages/Lessons';
 import Practice from './pages/Practice';
+import Auth from './pages/Auth';
+import SkillTree from './pages/SkillTree';
 import Village from './pages/Village';
 import Leaderboard from './pages/Leaderboard';
 import Profile from './pages/Profile';
@@ -17,9 +19,12 @@ function App() {
         <main>
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/blueprint" element={<Home />} />
             <Route path="/lessons" element={<Lessons />} />
             <Route path="/lesson/:id" element={<LessonDetail />} />
             <Route path="/practice" element={<Practice />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/skill-tree" element={<SkillTree />} />
             <Route path="/village" element={<Village />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/profile" element={<Profile />} />
