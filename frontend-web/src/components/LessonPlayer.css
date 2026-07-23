@@ -1,0 +1,282 @@
+/* ═══════════════════════════════════════════════════════════════════
+   LessonPlayer.css — Card-based lesson viewer
+   Uses project CSS custom properties from index.css
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Card shell ─────────────────────────────────────────────────── */
+.lp-card {
+  position: relative;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  box-shadow: var(--shadow-md);
+  transition: box-shadow var(--transition-normal);
+}
+
+.lp-card:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+/* ── XP badge ───────────────────────────────────────────────────── */
+.lp-xp {
+  position: absolute;
+  top: var(--spacing-md);
+  right: var(--spacing-md);
+  background: linear-gradient(135deg, var(--gold), var(--saFFron));
+  color: #1a1a1a;
+  font-family: var(--font-latin);
+  font-size: var(--text-caption);
+  font-weight: 700;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-pill);
+  letter-spacing: 0.3px;
+  box-shadow: 0 2px 6px rgba(255, 215, 0, 0.25);
+}
+
+/* ── Header ─────────────────────────────────────────────────────── */
+.lp-header {
+  padding-right: 60px; /* leave room for XP badge */
+}
+
+.lp-category {
+  display: inline-block;
+  font-family: var(--font-latin);
+  font-size: var(--text-micro);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--neutral);
+  background: rgba(191, 0, 255, 0.08);
+  padding: 2px var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--spacing-xs);
+}
+
+.lp-title {
+  font-family: var(--font-gurmukhi);
+  font-size: var(--text-h1);
+  font-weight: 700;
+  color: var(--text-h);
+  margin: 0 0 var(--spacing-xs);
+  line-height: 1.3;
+}
+
+.lp-description {
+  font-family: var(--font-latin);
+  font-size: var(--text-body);
+  color: var(--text);
+  opacity: 0.75;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ── Content grid ───────────────────────────────────────────────── */
+.lp-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-sm);
+}
+
+/* 2-column at tablet+ */
+@media (min-width: 540px) {
+  .lp-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ── Individual item row ────────────────────────────────────────── */
+.lp-item {
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  grid-template-rows: auto auto;
+  grid-template-areas:
+    "char title  audio"
+    "char pron   audio";
+  align-items: center;
+  column-gap: var(--spacing-sm);
+  row-gap: 2px;
+  background: rgba(191, 0, 255, 0.04);
+  border: 1px solid rgba(191, 0, 255, 0.08);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.lp-item:hover {
+  background: rgba(191, 0, 255, 0.08);
+  border-color: var(--border);
+}
+
+/* ── Item sub-elements ──────────────────────────────────────────── */
+
+.lp-item__char {
+  grid-area: char;
+  font-family: var(--font-gurmukhi);
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--text-h);
+  text-align: center;
+  line-height: 1;
+}
+
+.lp-item__title {
+  grid-area: title;
+  font-family: var(--font-latin);
+  font-size: var(--text-h3);
+  font-weight: 600;
+  color: var(--text-h);
+  line-height: 1.3;
+}
+
+.lp-item__pronunciation {
+  grid-area: pron;
+  font-family: var(--font-latin);
+  font-size: var(--text-caption);
+  color: var(--text);
+  opacity: 0.65;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+.lp-item__audio {
+  grid-area: audio;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: rgba(191, 0, 255, 0.06);
+  color: var(--text);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition-fast), transform var(--transition-fast);
+  padding: 0;
+  line-height: 1;
+}
+
+.lp-item__audio:hover {
+  background: rgba(191, 0, 255, 0.15);
+  transform: scale(1.1);
+}
+
+.lp-item__audio--active {
+  background: rgba(191, 0, 255, 0.2);
+  border-color: #BF00FF;
+  animation: lp-pulse 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes lp-pulse {
+  from { box-shadow: 0 0 0 0 rgba(191, 0, 255, 0.3); }
+  to   { box-shadow: 0 0 0 8px rgba(191, 0, 255, 0); }
+}
+
+/* ── Footer ─────────────────────────────────────────────────────── */
+.lp-footer {
+  display: flex;
+  justify-content: center;
+  padding-top: var(--spacing-sm);
+}
+
+/* Complete button */
+.lp-complete-btn {
+  font-family: var(--font-latin);
+  font-size: var(--text-h3);
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(135deg, var(--emerald), #0d6b06);
+  border: none;
+  border-radius: var(--radius-pill);
+  padding: var(--spacing-sm) var(--spacing-xl);
+  cursor: pointer;
+  transition: opacity var(--transition-fast), transform var(--transition-fast),
+    box-shadow var(--transition-fast);
+  box-shadow: 0 2px 8px rgba(19, 136, 8, 0.3);
+}
+
+.lp-complete-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(19, 136, 8, 0.4);
+}
+
+.lp-complete-btn:active {
+  transform: translateY(0);
+}
+
+.lp-complete-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Completed state */
+.lp-completed {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-family: var(--font-latin);
+  font-size: var(--text-h3);
+  font-weight: 600;
+  color: var(--emerald);
+}
+
+.lp-completed__icon {
+  font-size: 22px;
+}
+
+.lp-completed__text {
+  letter-spacing: 0.3px;
+}
+
+/* ── Responsive refinements ─────────────────────────────────────── */
+
+/* Small phones */
+@media (max-width: 380px) {
+  .lp-card {
+    padding: var(--spacing-md);
+    gap: var(--spacing-md);
+  }
+
+  .lp-item {
+    grid-template-columns: 40px 1fr auto;
+    padding: var(--spacing-xs) var(--spacing-sm);
+  }
+
+  .lp-item__char {
+    font-size: 24px;
+  }
+
+  .lp-item__title {
+    font-size: var(--text-body);
+  }
+
+  .lp-item__audio {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+
+  .lp-title {
+    font-size: var(--text-h2);
+  }
+}
+
+/* Tablet+ */
+@media (min-width: 768px) {
+  .lp-card {
+    padding: var(--spacing-xl);
+  }
+
+  .lp-item__char {
+    font-size: 32px;
+  }
+}
