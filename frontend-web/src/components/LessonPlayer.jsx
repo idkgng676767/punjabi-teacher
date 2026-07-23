@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import './LessonPlayer.css';
 
 /**
@@ -15,7 +15,11 @@ import './LessonPlayer.css';
  */
 const LessonPlayer = ({ lesson, onComplete }) => {
   const [completed, setCompleted] = useState(false);
-  const [playingAudio, setPlayingAudio] = useState(null);
+  const [recordingItemId, setRecordingItemId] = useState(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [scores, setScores] = useState({});
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
 
   // Determine which content array the lesson carries
   const items = lesson.letters || lesson.phrases || lesson.numbers || [];
@@ -25,10 +29,58 @@ const LessonPlayer = ({ lesson, onComplete }) => {
     if (onComplete) onComplete(lesson.id);
   };
 
-  const handleAudio = (itemId) => {
-    // Placeholder — real audio playback will be wired later
-    setPlayingAudio(itemId);
-    setTimeout(() => setPlayingAudio(null), 1500);
+  const handleAudio = async (itemId) => {
+    if (!isRecording && recordingItemId !== itemId) {
+      // START RECORDING
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mediaRecorder = new MediaRecorder(stream);
+        mediaRecorderRef.current = mediaRecorder;
+        audioChunksRef.current = [];
+
+        mediaRecorder.ondataavailable = (e) => {
+          audioChunksRef.current.push(e.data);
+        };
+
+        mediaRecorder.onstop = async () => {
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+          const formData = new FormData();
+          formData.append('audio', audioBlob);
+
+          try {
+            const response = await fetch('/api/speech/score', {
+              method: 'POST',
+              body: formData,
+            });
+            const data = await response.json();
+            setScores(prev => ({
+              ...prev,
+              [itemId]: Math.round(data.score || 0),
+            }));
+          } catch (error) {
+            console.error('Upload failed:', error);
+            setScores(prev => ({
+              ...prev,
+              [itemId]: 0,
+            }));
+          }
+
+          setIsRecording(false);
+          setRecordingItemId(null);
+          stream.getTracks().forEach(track => track.stop());
+        };
+
+        mediaRecorder.start();
+        setRecordingItemId(itemId);
+        setIsRecording(true);
+      } catch (error) {
+        console.error('Microphone access denied:', error);
+        alert('Please allow microphone access to record');
+      }
+    } else if (isRecording && recordingItemId === itemId) {
+      // STOP RECORDING
+      mediaRecorderRef.current?.stop();
+    }
   };
 
   // ── Render helpers ──────────────────────────────────────────────
@@ -61,13 +113,20 @@ const LessonPlayer = ({ lesson, onComplete }) => {
 
         {/* Audio button */}
         <button
-          className={`lp-item__audio ${playingAudio === (item.id || item.punjabi) ? 'lp-item__audio--active' : ''}`}
+          className={`lp-item__audio ${isRecording && recordingItemId === (item.id || item.punjabi) ? 'lp-item__audio--recording' : ''}`}
           onClick={() => handleAudio(item.id || item.punjabi)}
-          aria-label={`Play pronunciation for ${isLetter ? item.character : item.punjabi}`}
-          title="Play pronunciation"
+          aria-label={`Record pronunciation for ${isLetter ? item.character : item.punjabi}`}
+          title={isRecording && recordingItemId === (item.id || item.punjabi) ? 'Stop recording' : 'Start recording'}
         >
-          {playingAudio === (item.id || item.punjabi) ? '🔊' : '🔈'}
+          {isRecording && recordingItemId === (item.id || item.punjabi) ? '🔴' : '🔈'}
         </button>
+
+        {/* Score display */}
+        {scores[item.id || item.punjabi] !== undefined && (
+          <div className="lp-item__score">
+            Score: {scores[item.id || item.punjabi]}/100
+          </div>
+        )}
       </div>
     );
   };
